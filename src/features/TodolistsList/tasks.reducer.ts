@@ -8,7 +8,7 @@ import {clearTasksAndTodolists} from "common/actions/common.actions";
 
 const initialState: TasksStateType = {};
 
-export const fetchTasksTC = createAsyncThunk('tasks/fetchTasks', (todolistId: string, thunkAPI) => {
+export const fetchTasksTC = createAsyncThunk('tasks/fetchTasks', async (todolistId: string, thunkAPI) => {
     thunkAPI.dispatch(appActions.setAppStatus({status: "loading"}));
     const res = await todolistsAPI.getTasks(todolistId)
     const tasks = res.data.items;
@@ -16,7 +16,7 @@ export const fetchTasksTC = createAsyncThunk('tasks/fetchTasks', (todolistId: st
     return {tasks, todolistId}
 })
 
-export const removeTaskTC = createAsyncThunk('tasks/removeTask', (param: {
+export const removeTaskTC = createAsyncThunk('tasks/removeTask', async(param: {
     taskId: string, todolistId: string
 }, thunkAPI) => {
     const res = await todolistsAPI.deleteTask(param.todolistId, param.taskId)
@@ -24,9 +24,9 @@ export const removeTaskTC = createAsyncThunk('tasks/removeTask', (param: {
         return {taskId: param.taskId, todolistId: param.todolistId}
 
     })
-})
 
-export const addTaskTC = createAsyncThunk('tasks/addTask', (param: {
+
+export const addTaskTC = createAsyncThunk('tasks/addTask', async (param: {
     title: string, todolistId: string
 }, thunkAPI) => {
     thunkAPI.dispatch(appActions.setAppStatus({status: "loading"}));
@@ -35,17 +35,17 @@ export const addTaskTC = createAsyncThunk('tasks/addTask', (param: {
         .then((res) => {
             if (res.data.resultCode === 0) {
                 const task = res.data.data.item;
-                dispatch(tasksActions.addTask({task}));
-                dispatch(appActions.setAppStatus({status: "succeeded"}));
+                thunkAPI.dispatch(tasksActions.addTask({task}));
+                thunkAPI.dispatch(appActions.setAppStatus({status: "succeeded"}));
             } else {
-                handleServerAppError(res.data, dispatch);
+                handleServerAppError(res.data, thunkAPI.dispatch);
             }
         })
         .catch((error) => {
-            handleServerNetworkError(error, dispatch);
+            handleServerNetworkError(error, thunkAPI.dispatch);
         });
 })
-})
+
 
 export const addTaskTC_ =
     (title: string, todolistId: string): AppThunk =>
