@@ -4,31 +4,51 @@ import {createAsyncThunk, createSlice, PayloadAction} from "@reduxjs/toolkit";
 import {AppThunk} from "app/store";
 import {appActions} from "app/app.reducer";
 import {clearTasksAndTodolists} from "common/actions/common.actions";
-import {selectIsLoggedIn} from "./auth.selectors";
 
-export const loginTC = createAsyncThunk<{ isLoggedIn: boolean}, LoginParamsType, {rejectValue: {errors: Array<string>, fieldsErrors?: Array<FieldErrorType>}}>('auth/login',
-    async(param: LoginParamsType, thunkAPI) => {
-    thunkAPI.dispatch(appActions.setAppStatus({status: "loading"}));
-    try {
-        const res = await authAPI.login(param)
-        if (res.data.resultCode === 0) {
+export const loginTC = createAsyncThunk<{ isLoggedIn: boolean }, LoginParamsType, {
+    rejectValue: { errors: Array<string>, fieldsErrors?: Array<FieldErrorType> }
+}>('auth/login',
+    async (param: LoginParamsType, thunkAPI) => {
+        thunkAPI.dispatch(appActions.setAppStatus({status: "loading"}));
+        try {
+            const res = await authAPI.login(param)
+            if (res.data.resultCode === 0) {
 
-            thunkAPI.dispatch(appActions.setAppStatus({status: "succeeded"}));
-            return {isLoggedIn: true};
-        } else {
-            handleServerAppError(res.data, thunkAPI.dispatch);
-            return thunkAPI.rejectWithValue({errors: res.data.messages, fieldsErrors: res.data.fieldsErrors})
+                thunkAPI.dispatch(appActions.setAppStatus({status: "succeeded"}));
+                return {isLoggedIn: true};
+            } else {
+                handleServerAppError(res.data, thunkAPI.dispatch);
+                return thunkAPI.rejectWithValue({errors: res.data.messages, fieldsErrors: res.data.fieldsErrors})
 
+            }
+        } catch (err: any) {
+            const error = err;
+            handleServerNetworkError(error, thunkAPI.dispatch);
+            return thunkAPI.rejectWithValue({errors: [error.messages], fieldsErrors: undefined})
         }
-    } catch (err:any) {
-        const error = err;
-        handleServerNetworkError(error, thunkAPI.dispatch);
-        return thunkAPI.rejectWithValue({errors: [error.messages], fieldsErrors: undefined})
-    }
-})
+    })
 
-export const loginTC_ = (data: LoginParamsType): AppThunk => (dispatch) => {
-};
+export const logoutTC = createAsyncThunk('auth/logout',
+    async (param, thunkAPI) => {
+        thunkAPI.dispatch(appActions.setAppStatus({status: "loading"}));
+        try {
+            const res = await authAPI.logout()
+            if (res.data.resultCode === 0) {
+
+                thunkAPI.dispatch(appActions.setAppStatus({status: "succeeded"}));
+                return {isLoggedIn: false};
+            } else {
+                handleServerAppError(res.data, thunkAPI.dispatch);
+                return thunkAPI.rejectWithValue({errors: res.data.messages, fieldsErrors: res.data.fieldsErrors})
+
+            }
+        } catch (err: any) {
+            const error = err;
+            handleServerNetworkError(error, thunkAPI.dispatch);
+            return thunkAPI.rejectWithValue({errors: [error.messages], fieldsErrors: undefined})
+        }
+    })
+
 
 const slice = createSlice({
     name: "auth",
@@ -40,12 +60,14 @@ const slice = createSlice({
             state.isLoggedIn = action.payload.isLoggedIn;
         },
     },
-    extraReducers: builder =>  {
-        builder.addCase(loginTC.fulfilled,(state, action) => {
+    extraReducers: builder => {
+        builder.addCase(loginTC.fulfilled, (state, action) => {
 
-               state.isLoggedIn = action.payload.isLoggedIn
+            state.isLoggedIn = action.payload.isLoggedIn
+        })
+        builder.addCase(logoutTC.fulfilled, (state, action) => {
 
-
+            state.isLoggedIn = action.payload.isLoggedIn
         })
     }
 });
@@ -56,20 +78,4 @@ export const authActions = slice.actions;
 // thunks
 
 
-export const logoutTC = (): AppThunk => (dispatch) => {
-    dispatch(appActions.setAppStatus({status: "loading"}));
-    authAPI
-        .logout()
-        .then((res) => {
-            if (res.data.resultCode === 0) {
-                dispatch(authActions.setIsLoggedIn({isLoggedIn: false}));
-                dispatch(clearTasksAndTodolists());
-                dispatch(appActions.setAppStatus({status: "succeeded"}));
-            } else {
-                handleServerAppError(res.data, dispatch);
-            }
-        })
-        .catch((error) => {
-            handleServerNetworkError(error, dispatch);
-        });
-};
+
